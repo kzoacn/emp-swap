@@ -36,9 +36,8 @@ class AriPrivacyFreeEva  :public ArithmeticExecution{ public:
 		for(int i=0;i<LOGMOD;i++){
 			zeros[i]=Number();
 			if(i==0){
-				prg2.random_block(&powerOf2[0].mask, 1);
-				modBlock(powerOf2[0].mask);
-				powerOf2[0].val=makeBlock(0,1);
+				BN_zero(powerOf2[0].mask);
+				BN_one(powerOf2[0].val);
 			}else{
 				add_gate(powerOf2[i],powerOf2[i-1],powerOf2[i-1]);
 			}
@@ -67,16 +66,16 @@ class AriPrivacyFreeEva  :public ArithmeticExecution{ public:
         FOR ARITHMETIC
     */
 	void add_gate(Number &c,const Number &a,const Number &b){
-        c.mask=addBlocks(a.mask,b.mask);
-        c.val=addBlocks(a.val,b.val);
+		BN_mod_add(c.mask,a.mask,b.mask,MOD,CTX);
+		BN_mod_add(c.val,a.val,b.val,MOD,CTX);
 	}
 	void sub_gate(Number &c,const Number &a,const Number &b){
-        c.mask=subBlocks(a.mask,b.mask);
-        c.val=subBlocks(a.val,b.val);
+		BN_mod_sub(c.mask,a.mask,b.mask,MOD,CTX);
+		BN_mod_sub(c.val,a.val,b.val,MOD,CTX);
 	}
 	void sel_gate(Number &z,const Bit &b,const Number &x,const Number &y){
 		
-		block diff=subBlocks(x.mask,y.mask);
+		/*block diff=subBlocks(x.mask,y.mask);
 		block h=hash_with_idx(b.bit,gid++,&prp.aes);
 		modBlock(h);
 		block R;
@@ -90,57 +89,62 @@ class AriPrivacyFreeEva  :public ArithmeticExecution{ public:
 			z.val=x.val;
 		}else{
 			z.val=y.val;
+		}*/
+
+		BIGNUM *diff,*h,*R;
+		diff=BN_new();
+		h=BN_new();
+		R=BN_new();
+
+		block h0[2];
+		h0[0]=hash_with_idx(b.bit,gid,&prp.aes);
+		h0[1]=hash_with_idx(b.bit,gid+1,&prp.aes);
+
+		gid+=2;
+
+		BN_bin2bn((const unsigned char*)&h0[0],32,h);
+
+		int size;
+		unsigned char tmp[32];
+		io->recv_data(&size,4);
+		io->recv_data(tmp,32);
+		BN_bin2bn(tmp,size,R);
+		recv_h.put(tmp,size);
+		BN_mod_sub(z.mask,y.mask,h,MOD,CTX);
+		if(getLSB(b.bit)){
+			BN_mod_add(z.mask,z.mask,R,MOD,CTX);
+			BN_mod_add(z.mask,z.mask,diff,MOD,CTX);
+			BN_copy(z.val,x.val);
+		}else{
+			BN_copy(z.val,y.val);
 		}
+
+		BN_free(diff);
+		BN_free(h);
+		BN_free(R);
 	}
 
 
 	void sels_gate(int length,Number *c,const Bit *bits,const Number *a,const Number *b){
-		
-		if(length*sizeof(block)>buffer.size())
-			buffer.resize(length*sizeof(block));
-		//block *h=(block*)buffer.data();
-		block h[LOGMOD];
-		hash_with_indices(length,h,(block*)bits,gid,&prp.aes);
-		gid+=length;
-
-		for(int i=0;i<length;i++){
-			block diff=subBlocks(a[i].mask,b[i].mask);
-			modBlock(h[i]);
-			block R;
-			io->recv_block(&R,1);
-			//printBlock(R);
-			recv_h.put(&R,sizeof(block));
-			c[i].mask=subBlocks(b[i].mask,h[i]);
-
-			if(getLSB(bits[i].bit)){
-				c[i].mask=addBlocks(c[i].mask,R);
-				c[i].mask=addBlocks(c[i].mask,diff);
-				c[i].val=a[i].val;
-			}else{
-				c[i].val=b[i].val;
-			}
-		}
+		for(int i=0;i<length;i++)
+			sel_gate(c[i],bits[i],a[i],b[i]);
 	}
 	Number b2a_gate(const Integer &x){
-		Number res[LOGMOD];
-		powerOf2[x.size()-1]=-powerOf2[x.size()-1];
-		sels_gate(x.size(),res,x.bits.data(),powerOf2,zeros);
-		powerOf2[x.size()-1]=-powerOf2[x.size()-1];
-		Number c=zero_block;
+		Number res[LOGMOD]; 
+		sels_gate(x.size(),res,x.bits.data(),powerOf2,zeros); 
+		Number c;
 		for(int i=0;i<x.size();i++)
 			c=c+res[i];
 		return c;
 	}
-
-
-	Integer a2b_gate(int length,const Number &v){
-		long long vv=get_val(v.val);
-		return Integer(length,vv>=HALFMOD ? vv-MOD : vv,PROVER);
-	}
+ 
 	Hash eq_hash;
 	bool eq(const Number &a,const Number &b){
 		Number diff=a-b;
-		eq_hash.put(&diff.mask,sizeof(block));
+		unsigned char tmp[32];
+		memset(tmp,0,sizeof(tmp));
+		BN_bn2bin(diff.mask,tmp);
+		eq_hash.put(tmp,sizeof(tmp));
 		return true;
 	}
 	bool is_true(const Bit &bit){

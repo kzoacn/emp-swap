@@ -18,9 +18,9 @@ class AriPlainEva  :public ArithmeticExecution{ public:
 		*((char *) &constant[0]) &= 0xfe;
        	*((char *) &constant[1]) |= 0x01;
 		for(int i=0;i<LOGMOD;i++){
-			zeros[i]=zero_block;
+			BN_zero(zeros[i].val);
 			if(i==0){
-				powerOf2[0].val=makeBlock(0,1);
+				BN_one(powerOf2[0].val);
 			}else{
 				add_gate(powerOf2[i],powerOf2[i-1],powerOf2[i-1]);
 			}
@@ -46,17 +46,17 @@ class AriPlainEva  :public ArithmeticExecution{ public:
     */
 
 	void add_gate(Number &c,const Number &a,const Number &b){
-		c.val=addBlocks(a.val,b.val);
+		BN_mod_add(c.val,a.val,b.val,MOD,CTX);
 	}
 	void sub_gate(Number &c,const Number &a,const Number &b){
-		c.val=subBlocks(a.val,b.val);
+		BN_mod_sub(c.val,a.val,b.val,MOD,CTX);
 	}
 
 	void sel_gate(Number &z,const Bit &b,const Number &x,const Number &y){
 		if(getLSB(b.bit)){
-			z.val=x.val;
+			BN_copy(z.val,x.val);
 		}else{
-			z.val=y.val;
+			BN_copy(z.val,y.val);
 		}
 	}
 
@@ -67,21 +67,16 @@ class AriPlainEva  :public ArithmeticExecution{ public:
 	}
 	Number b2a_gate(const Integer &x){
 		Number res[LOGMOD];
-		powerOf2[x.size()-1]=-powerOf2[x.size()-1];
+		
 		sels_gate(x.size(),res,x.bits.data(),powerOf2,zeros);
-		powerOf2[x.size()-1]=-powerOf2[x.size()-1];
-		Number c=zero_block;
+
+		Number c;
+		BN_zero(c.val);
 		for(int i=0;i<x.size();i++)
 			c=c+res[i];
 		return c;
 	}
-
-
-	Integer a2b_gate(int length,const Number &v){
-		long long vv=get_val(v.val);
-		return Integer(length,vv>=HALFMOD ? vv-MOD : vv,PROVER);
-	}
-
+ 
 	bool eq(const Number &a,const Number &b){
 		
 		return true;

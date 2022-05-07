@@ -13,24 +13,14 @@ Bit test(void* ctx){
 	Integer y(BITLENGTH,8,PROVER);
 	Integer z(BITLENGTH,14,PROVER);
 	Integer w(BITLENGTH,15,PROVER);
-
-	Integer _t1(BITLENGTH,3,PROVER);
-	Integer _t2(BITLENGTH,5,PROVER);
-
-	Number t1=b2a(_t1);
-	Number t2=b2a(_t2);
-
-	Number t=t1*t2;
-
-	Integer r=a2b(BITLENGTH,t);
-
+ 
+ 
 
 	Bit b1=(x+y)>=z;
 	Bit b2=(y+x)==z;
-	Bit b3=(x+y)<w;
-	Bit b4=r==w;
+	Bit b3=(x+y)<w; 
 
-	return b1 & b2 & b3 & b4;
+	return b1 & b2 & b3;
 }
 
 Bit ez(void* ctx){ 

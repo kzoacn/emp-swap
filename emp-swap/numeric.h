@@ -7,16 +7,14 @@ namespace emp {
 const static int PROVER = 1;
 const static int VERIFIER = 2;
 
-#define MOD ((1LL<<61)-1)
-#define HALFMOD (MOD>>1)
-#define LOGMOD 60
+ 
+#define LOGMOD 256
 
 #ifndef BITLENGTH
 
-#define BITLENGTH 55
+#define BITLENGTH 256
 
-#endif
-const block P=_mm_set_epi64x(MOD,MOD);
+#endif 
 
 
 block make_delta(block delta){ 
@@ -46,34 +44,29 @@ void printBlock(block var)  {
     int64_t *v64val = (int64_t*) &var;
     printf("%.16llx %.16llx\n", (long long)v64val[1], (long long)v64val[0]);
 }
-
-inline void modBlock(block &x) {
-    x=_mm_add_epi64(_mm_and_si128(x,P),_mm_srli_epi64(x,61));
-    x=_mm_sub_epi64(x,_mm_andnot_si128(_mm_cmpgt_epi64(P,x),P));
-}
-
-inline void modBlock_one(block &x) {
-    x=_mm_sub_epi64(x,_mm_andnot_si128(_mm_cmpgt_epi64(P,x),P));
-}
-
-inline block addBlocks(const block &x,const block &y) {
-    block res=_mm_add_epi64(x,y);
-    modBlock_one(res);
-    return res;
-}
-
-inline block subBlocks(const block &x,const block &y) {
-    block res=_mm_sub_epi64(P,y);
-    return addBlocks(x,res);
-}
-
-inline block addCBlocks(const block &x,long long y) {
-    return addBlocks(x,_mm_set_epi64x(y,y));
-}
+ 
 
 long long get_val(const block &val) {
     long long *vv=(long long*)&val;
     return *vv;
+}
+
+template<class IO>
+void send_bn(IO *io, const BIGNUM *bn) {
+	int len = BN_num_bytes(bn);
+	io->send_data(&len,4);
+	unsigned char tmp[32];
+	BN_bn2bin(bn, tmp);
+	io->send_data(tmp, len);
+}
+
+template<class IO>
+void recv_bn(IO *io, BIGNUM *&bn) {
+	int len;
+	io->recv_data(&len,4);
+	unsigned char tmp[32];
+	io->recv_data(tmp, len);
+	BN_bin2bn(tmp,len,bn);
 }
 
 }

@@ -13,10 +13,21 @@
 //#endif
 
 namespace emp {
+
+void setup_parameters(){
+	GROUP = EC_GROUP_new_by_curve_name(NID_secp256k1);
+	MOD = BN_new();
+	CTX = BN_CTX_new();
+	EC_GROUP_get_order(GROUP,MOD,CTX); 
+}
+
 template<typename IO>
 inline void setup_arithmetic_zk(IO* io, int party) {
-	if(party == VERIFIER) {
-		AriPrivacyFreeGen<IO> * t = new AriPrivacyFreeGen<IO>(io);
+
+	setup_parameters();
+	
+	if(party == VERIFIER) { 
+		AriPrivacyFreeGen<IO> * t = new AriPrivacyFreeGen<IO>(io); 
 		CircuitExecution::circ_exec = t;
 		ArithmeticExecution::ari_exec=t;
 		ProtocolExecution::prot_exec = new ArithmeticZKGen<IO>(io, t);
@@ -70,7 +81,7 @@ AriPlainEva *plain;
 ArithmeticPlainEva *plain_exec;
 template<typename IO>
 void preprocess(IO *io,void *ctx,Bit(*f)(void*)){
-
+	setup_parameters();
 	ArithmeticExecution::ari_exec=plain;
 	CircuitExecution::circ_exec=plain;
 	ProtocolExecution::prot_exec = plain_exec;
@@ -86,7 +97,7 @@ AriPrivacyFreeGen<LocalIO> *verifier;
 ArithmeticZKGen<LocalIO> *verifier_exec;
 
 void sim_prover(void *ctx,Bit(*f)(void*)){
-
+	setup_parameters();
 	ArithmeticExecution::ari_exec=prover;
 	CircuitExecution::circ_exec=prover;
 	ProtocolExecution::prot_exec = prover_exec;
@@ -94,7 +105,7 @@ void sim_prover(void *ctx,Bit(*f)(void*)){
 
 }
 void sim_verifier(void *ctx,Bit(*f)(void*)){
-
+	setup_parameters();
 	ArithmeticExecution::ari_exec=verifier;
 	CircuitExecution::circ_exec=verifier;
 	ProtocolExecution::prot_exec = verifier_exec;
@@ -105,7 +116,6 @@ void sim_verifier(void *ctx,Bit(*f)(void*)){
 
 template<typename IO>
 bool prove(IO *io,void *ctx,Bit(*f)(void*)){
-	
 	
 
 	char out_msg[Hash::DIGEST_SIZE];
@@ -118,6 +128,8 @@ bool prove(IO *io,void *ctx,Bit(*f)(void*)){
 	
 	AriPrivacyFreeEva<IO> * a_exec = (AriPrivacyFreeEva<IO> *)ArithmeticExecution::ari_exec;
 	ArithmeticZKEva<IO> * p_exec = (ArithmeticZKEva<IO> *)ProtocolExecution::prot_exec;
+	
+
 
 	io->recv_data(comDelta,sizeof(Com));
 	io->recv_data(comDeltaM,sizeof(Com));
@@ -130,15 +142,20 @@ bool prove(IO *io,void *ctx,Bit(*f)(void*)){
 	plain_exec->buf=buf;
 	p_exec->buf=buf;
 
+	
+
 	CountPlainEva* count=new CountPlainEva(plain);
 	ArithmeticExecution::ari_exec=plain;
 	CircuitExecution::circ_exec=plain;
 	ProtocolExecution::prot_exec=count;
+
+
 	f(ctx); 
+	
 
 	long long counter=count->counter;
 	//std::cerr<<"size is "<<counter<<std::endl;
-
+	
 	std::thread pre_thread(preprocess<IO>,io,ctx,f);
 	
 
@@ -162,12 +179,19 @@ bool prove(IO *io,void *ctx,Bit(*f)(void*)){
 	io->flush();  
 	io->recv_data(decomDelta,sizeof(Decom)); 
 	io->recv_data(decomDeltaM,sizeof(Decom));
-	block delta,deltaM,seed;
+	block delta,seed;
+	BIGNUM *mdelta=BN_new();
+
 	io->recv_data(&delta,sizeof(block));
-	io->recv_data(&deltaM,sizeof(block));
-	io->recv_data(&seed,sizeof(block));//TODO commit
+	//io->recv_data(&deltaM,sizeof(block));
+	recv_bn(io,mdelta);
+	io->recv_data(&seed,sizeof(block));
 	Commiter.open(decomDelta,comDelta,&delta,sizeof(block));	
-	Commiter.open(decomDeltaM,comDeltaM,&deltaM,sizeof(block));	
+
+	unsigned char deltaM[32];
+	memset(deltaM,0,32);
+	BN_bn2bin(mdelta,deltaM);
+	Commiter.open(decomDeltaM,comDeltaM,deltaM,sizeof(block));	
 	//check circuit
 
 		
@@ -195,7 +219,7 @@ bool prove(IO *io,void *ctx,Bit(*f)(void*)){
 
 	prover->gid=gid;
 	verifier->gid=gid;
-	verifier->set_delta(delta,deltaM);
+	verifier->set_delta(delta,mdelta);
 	prover_exec->all_size=counter;
 	prover_exec->buf=buf;
 	prover_exec->ot->prg.reseed(&p_exec->seed);
@@ -207,10 +231,11 @@ bool prove(IO *io,void *ctx,Bit(*f)(void*)){
 	std::thread thread_prover(sim_prover,ctx,f);
 	std::thread thread_verifier(sim_verifier,ctx,f);
 
-	thread_prover.join();
-	thread_verifier.join();
-	pre_thread2.join();
 
+	thread_prover.join(); 
+	thread_verifier.join(); 
+	pre_thread2.join();
+	
 
 	prover->recv_h.digest(out_msg);
 
@@ -237,6 +262,8 @@ bool prove(IO *io,void *ctx,Bit(*f)(void*)){
 template<typename IO>
 bool verify(IO *io,void *ctx,Bit(*f)(void*)){
 
+
+
 	AriPrivacyFreeGen<IO> * a_exec = (AriPrivacyFreeGen<IO> *)ArithmeticExecution::ari_exec;
 	ArithmeticZKGen<IO> * p_exec = (ArithmeticZKGen<IO> *)ProtocolExecution::prot_exec;
 	
@@ -245,12 +272,20 @@ bool verify(IO *io,void *ctx,Bit(*f)(void*)){
 	Com comDelta,comDeltaM,comDig;
 	Decom decomDelta,decomDeltaM,decomDig;
 	Commiter.commit(decomDelta,comDelta,&p_exec->gc->delta,sizeof(p_exec->gc->delta));
-	Commiter.commit(decomDeltaM,comDeltaM,&p_exec->gc->mdelta,sizeof(p_exec->gc->delta));
 
+	
+	unsigned char deltaM[32];
+	memset(deltaM,0,32);
+	std::cout<< BN_num_bytes(p_exec->gc->mdelta) << std::endl;
+	BN_bn2bin(p_exec->gc->mdelta,deltaM);
+
+	Commiter.commit(decomDeltaM,comDeltaM,deltaM,sizeof(deltaM));
 	io->send_data(comDelta,sizeof(Com));
 	io->send_data(comDeltaM,sizeof(Com));
 	io->flush();  
+	
 	Bit bit=f(ctx);  
+	
 	a_exec->is_true(bit); 
 	char dig[Hash::DIGEST_SIZE];
 	char oth[Hash::DIGEST_SIZE];
@@ -261,11 +296,12 @@ bool verify(IO *io,void *ctx,Bit(*f)(void*)){
 	io->flush(); 
 	io->send_data(decomDeltaM,sizeof(Decom));
 	io->send_data(&p_exec->gc->delta,sizeof(block));
-	io->send_data(&p_exec->gc->mdelta,sizeof(block));
+	//io->send_data(&p_exec->gc->mdelta,sizeof(block));
+	send_bn(io,p_exec->gc->mdelta);
 	io->send_data(&p_exec->seed,sizeof(block));
-	io->flush(); 
+	io->flush();  
 	io->recv_data(decomDig,sizeof(Decom));
-	io->recv_data(oth,sizeof(oth));
+	io->recv_data(oth,sizeof(oth)); 
 	bool ans = Commiter.open(decomDig,comDig,oth,Hash::DIGEST_SIZE);
 
 	//std::cout<<(int)dig[0]<<std::endl;
@@ -280,12 +316,14 @@ bool verify(IO *io,void *ctx,Bit(*f)(void*)){
 
 template<typename IO>
 bool judge(IO *io,int party,void *ctx,Bit(*f)(void*) ){
+ 
 	if(party==PROVER){
 		if(!prove(io,ctx,f)){
 			return false;
 		}
-	}else{
+	}else{ 
 		if(!verify(io,ctx,f)){ 
+			puts("verify failed");
 			return false;
 		}
 	}

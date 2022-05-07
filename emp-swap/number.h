@@ -5,47 +5,31 @@
 #include "emp-swap/numeric.h"
 namespace emp {
 class Number{ public:
-	block mask;
-    block val;
 
-	Number(const block& _m=zero_block,const block &_v=zero_block) {
-		memcpy(&mask, &_m, sizeof(block));
-		memcpy(&val, &_v, sizeof(block));
+	BIGNUM *mask,*val;
+
+	Number() {
+        mask=BN_new();
+        val=BN_new();
+        BN_zero(mask);
+        BN_zero(val);
 	}
     Number(const long long &x);
     Number(int length, long long input, int party);
 
+    Number& operator=(const Number &rhs);
 
 	Number operator+(const Number& rhs) const; 
 	Number operator-(const Number& rhs) const; 
     Number operator*(const Number& rhs) const; 
     Number operator*(const Integer& rhs) const;
-    Number operator/(const Number& rhs) const;  
-    Number operator%(const Number& rhs) const;  
-    Number operator-() const;
+    
+    void assert_eq(const Number &rhs) const;
 
-    Bit operator==(const Number& rhs) const;
-    Bit operator!=(const Number& rhs) const;
-    Bit operator<(const Number &rhs) const;
-    Bit operator<=(const Number &rhs) const;
-    Bit operator>(const Number &rhs) const;
-    Bit operator>=(const Number &rhs) const;
-
-    Number operator>>(int shamt) const; 
-    Number operator<<(int shamt) const; 
-	Number operator<<(const Number& shamt)const;
-	Number operator>>(const Number& shamt)const;
-
-
-	Number operator&(const Number& rhs)const;
-	Number operator|(const Number& rhs)const;    
-    Number select(Bit bit,Number rhs)const;
-    std::pair<Number,Number> div(const Number &rhs)const;
-
-    Number sqrt()const;
+    Number operator-() const; 
+    Number select(Bit bit,Number rhs)const; 
 };
-inline Number b2a(Integer x);
-inline Integer a2b(const Number &x,int length);
+inline Number b2a(Integer x); 
 #include "emp-swap/number.hpp"
 }
 #endif
