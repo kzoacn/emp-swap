@@ -1,0 +1,28 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+
+- script: |
+   git clone https://github.com/emp-toolkit/emp-readme.git
+   bash ./emp-readme/scripts/install_packages.sh
+   git clone https://github.com/emp-toolkit/emp-tool.git
+   cd emp-tool
+   cmake -DTHREADING=true .
+   sudo make install
+   cd ..
+   bash ./emp-readme/scripts/install_emp-ot.sh
+   bash ./emp-readme/scripts/install_emp-sh2pc.sh
+   cmake -DCMAKE_BUILD_TYPE=$TYPE -DTHREADING=true .
+   make 
+   ./run ./bin/root 12345 && ./run ./bin/int 12346 && ./run ./bin/num 12347 && ./run ./bin/neg 12348 && ./run ./bin/real 12349
+   exit $?
+  displayName: 'Tests'
