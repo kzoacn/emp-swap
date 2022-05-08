@@ -16,12 +16,12 @@ class Number{ public:
 	}
     Number(const long long &x);
     Number(int length, long long input, int party);
+    Number(const Number &oth);
 
     Number& operator=(const Number &rhs);
 
 	Number operator+(const Number& rhs) const; 
-	Number operator-(const Number& rhs) const; 
-    Number operator*(const Number& rhs) const; 
+	Number operator-(const Number& rhs) const;  
     Number operator*(const Integer& rhs) const;
     
     void assert_eq(const Number &rhs) const;

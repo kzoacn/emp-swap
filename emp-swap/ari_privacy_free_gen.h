@@ -22,7 +22,10 @@ public:
 		tmp.random_block(b, 2);
 
 		BIGNUM *mdelta=BN_new(); 
-		BN_bin2bn((const unsigned char *) &b[0], 32, mdelta);
+		//BN_bin2bn((const unsigned char *) &b[0], 32, mdelta);
+		BN_one(mdelta);
+		BN_mod(mdelta, mdelta, MOD,CTX);
+
 		set_delta(a,mdelta);
 		BN_free(mdelta);
 		eq_hash.reset();
@@ -54,7 +57,7 @@ public:
 		for(int i=0;i<LOGMOD;i++){
 			zeros[i]=Number();
 			if(i==0){
-				BN_zero(powerOf2[0].mask);
+				BN_one(powerOf2[0].mask);
 				BN_mod_sub(powerOf2[0].mask,powerOf2[0].mask,mdelta,MOD,CTX);
 			}else{
 				add_gate(powerOf2[i],powerOf2[i-1],powerOf2[i-1]);
@@ -120,6 +123,7 @@ public:
 		h[1][0]=hash_with_idx(xorBlocks(b.bit,delta),gid,&prp.aes);
 		h[1][1]=hash_with_idx(xorBlocks(b.bit,delta),gid+1,&prp.aes);
 
+		
 		gid+=2;
 		
 		BN_bin2bn((const unsigned char*) &h[0][0],32,h0);
@@ -127,17 +131,22 @@ public:
 		
 		BN_mod(h0,h0,MOD,CTX); 
 		BN_mod(h1,h1,MOD,CTX);
-
-
+ 
 		BN_mod_sub(R,h1,h0,MOD,CTX);
 		BN_mod_sub(R,R,diff,MOD,CTX);
+
 		int size;
 		size = BN_num_bytes(R);
 		BN_bn2bin(R,tmp);
+		 
+
 		io->send_data(&size,4);
 		io->send_data(tmp,32);
 		BN_mod_sub(z.mask,y.mask,h0,MOD,CTX);
 		
+		BIGNUM *t=BN_new();
+		BN_mod_add(t,z.mask,mdelta,MOD,CTX);	  
+
 		BN_free(diff);
 		BN_free(h0);
 		BN_free(h1);
@@ -145,8 +154,9 @@ public:
 	}
 
 	void sels_gate(int length,Number *c,const Bit *bits,const Number *a,const Number *b){
-		for(int i=0;i<length;i++)
+		for(int i=0;i<length;i++){ 
 			sel_gate(c[i],bits[i],a[i],b[i]);
+		}
 	}
 	Number b2a_gate(const Integer &x){
 		Number res[LOGMOD];
@@ -159,7 +169,8 @@ public:
 
 	Hash eq_hash;
 	bool eq(const Number &a,const Number &b){
-		Number diff=a-b;
+		Number diff=a-b; 
+
 		unsigned char tmp[32];
 		memset(tmp,0,sizeof(tmp));
 		BN_bn2bin(diff.mask,tmp);

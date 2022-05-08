@@ -16,6 +16,10 @@ const static int VERIFIER = 2;
 
 #endif 
 
+void print(char *s1,BIGNUM *n){
+	char *s = BN_bn2dec(n);
+	printf("%s %s\n",s1,s);
+}
 
 block make_delta(block delta){ 
     *((char *) &delta) |= 0x01;

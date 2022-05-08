@@ -1,4 +1,11 @@
 
+Number::Number(const Number &oth) {
+	mask = BN_new();
+	val = BN_new();
+	BN_copy(mask, oth.mask);
+	BN_copy(val, oth.val);
+}
+
 Number::Number(int length, long long input, int party = PROVER){
         Integer t(length,input,party);  
         Number c=b2a(t); 

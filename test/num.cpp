@@ -11,14 +11,15 @@ NetIO * io;
 
 Bit test(void* ctx){
   
-    Number a(BITLENGTH,6,PROVER);  
-    //Number b(BITLENGTH,8,PROVER);
-    Number c(BITLENGTH,6,PUBLIC);
+    Number a(BITLENGTH,4,PROVER);  
+    Integer b(BITLENGTH,5,PROVER);
+    Number c(BITLENGTH,11,PUBLIC);  
+    Number d(BITLENGTH,9,PUBLIC);  
+ 
+    Number e=a*b; 
+    Number f=c+d; 
 
-    a.assert_eq(c);
-    //Number d=a+b;
-
-    //d.assert_eq(c);
+    e.assert_eq(f);
 
     Bit ans(true,PUBLIC); 
     return ans;

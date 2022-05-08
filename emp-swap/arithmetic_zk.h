@@ -19,6 +19,7 @@ void setup_parameters(){
 	MOD = BN_new();
 	CTX = BN_CTX_new();
 	EC_GROUP_get_order(GROUP,MOD,CTX); 
+	//BN_set_word(MOD,13);
 }
 
 template<typename IO>
@@ -276,7 +277,7 @@ bool verify(IO *io,void *ctx,Bit(*f)(void*)){
 	
 	unsigned char deltaM[32];
 	memset(deltaM,0,32);
-	std::cout<< BN_num_bytes(p_exec->gc->mdelta) << std::endl;
+	//std::cout<< BN_num_bytes(p_exec->gc->mdelta) << std::endl;
 	BN_bn2bin(p_exec->gc->mdelta,deltaM);
 
 	Commiter.commit(decomDeltaM,comDeltaM,deltaM,sizeof(deltaM));
@@ -322,8 +323,7 @@ bool judge(IO *io,int party,void *ctx,Bit(*f)(void*) ){
 			return false;
 		}
 	}else{ 
-		if(!verify(io,ctx,f)){ 
-			puts("verify failed");
+		if(!verify(io,ctx,f)){  
 			return false;
 		}
 	}

@@ -36,7 +36,7 @@ class AriPrivacyFreeEva  :public ArithmeticExecution{ public:
 		for(int i=0;i<LOGMOD;i++){
 			zeros[i]=Number();
 			if(i==0){
-				BN_zero(powerOf2[0].mask);
+				BN_one(powerOf2[0].mask);
 				BN_one(powerOf2[0].val);
 			}else{
 				add_gate(powerOf2[i],powerOf2[i-1],powerOf2[i-1]);
@@ -96,6 +96,7 @@ class AriPrivacyFreeEva  :public ArithmeticExecution{ public:
 		h=BN_new();
 		R=BN_new();
 
+		BN_mod_sub(diff,x.mask,y.mask,MOD,CTX);
 		block h0[2];
 		h0[0]=hash_with_idx(b.bit,gid,&prp.aes);
 		h0[1]=hash_with_idx(b.bit,gid+1,&prp.aes);
@@ -103,21 +104,25 @@ class AriPrivacyFreeEva  :public ArithmeticExecution{ public:
 		gid+=2;
 
 		BN_bin2bn((const unsigned char*)&h0[0],32,h);
-
+		BN_mod(h,h,MOD,CTX);  
+		
 		int size;
 		unsigned char tmp[32];
 		io->recv_data(&size,4);
 		io->recv_data(tmp,32);
 		BN_bin2bn(tmp,size,R);
+		 
+
 		recv_h.put(tmp,size);
 		BN_mod_sub(z.mask,y.mask,h,MOD,CTX);
 		if(getLSB(b.bit)){
 			BN_mod_add(z.mask,z.mask,R,MOD,CTX);
-			BN_mod_add(z.mask,z.mask,diff,MOD,CTX);
+			BN_mod_add(z.mask,z.mask,diff,MOD,CTX); 
 			BN_copy(z.val,x.val);
 		}else{
 			BN_copy(z.val,y.val);
-		}
+		} 
+ 
 
 		BN_free(diff);
 		BN_free(h);
@@ -126,8 +131,9 @@ class AriPrivacyFreeEva  :public ArithmeticExecution{ public:
 
 
 	void sels_gate(int length,Number *c,const Bit *bits,const Number *a,const Number *b){
-		for(int i=0;i<length;i++)
+		for(int i=0;i<length;i++){ 
 			sel_gate(c[i],bits[i],a[i],b[i]);
+		}
 	}
 	Number b2a_gate(const Integer &x){
 		Number res[LOGMOD]; 
@@ -140,7 +146,8 @@ class AriPrivacyFreeEva  :public ArithmeticExecution{ public:
  
 	Hash eq_hash;
 	bool eq(const Number &a,const Number &b){
-		Number diff=a-b;
+		Number diff=a-b; 
+
 		unsigned char tmp[32];
 		memset(tmp,0,sizeof(tmp));
 		BN_bn2bin(diff.mask,tmp);
