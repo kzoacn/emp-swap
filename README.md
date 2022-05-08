@@ -2,7 +2,11 @@
 
 <img src="https://raw.githubusercontent.com/emp-toolkit/emp-readme/master/art/logo-full.jpg" width=300px/>
 
-## THIS IS A TOY VERSION, DO NOT USE IT 
+## THIS IS A TOY VERSION, DO NOT USE IT IN ANY PRODUCTION ENVIROMENTS 
+
+## Intro
+
+Resources Fair Swap
 
 ## Installation
 
