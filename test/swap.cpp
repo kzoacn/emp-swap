@@ -12,9 +12,12 @@ const char aes_path[]="/home/kzoacn/work/emp-swap/emp-swap/files/AES-non-expande
 const char sha_0[]="1101101001010110100110001011111000010111101110011011010001101001011000100011001101010111100110010111011110011111101111101100101010001100111001011101010010010001110000001101001001100010010000111011101011111110111110011110101000011000001101111010100111011000";
 // SHA(1) = 
 const char sha_1[]="1110001110110000110001000100001010011000111111000001110000010100100110101111101111110100110010001001100101101111101110010010010000100111101011100100000111100100011001001001101110010011010011001010010010010101100110010001101101111000010100101011100001010101";
-// Enc(0,0) x 2 =
-const char ct[]="0110011011101001010010111101010011101111100010100010110000111011100010000100110011111010010110011100101000110100001010110010111001100110111010010100101111010100111011111000101000101100001110111000100001001100111110100101100111001010001101000010101100101110";
 
+const char ct[]="1101101011110001001011101101100110000101001000011110110111001001100100001000010110011100011111100100000110111001011010001011011100111000110001100010100100000010111000011100110111010011010001100110001010101011111010100010001010000001010011111011101100000111";
+
+const char s_key[]="1000101011111010110000010110100101110111100000010000000111001101010110001011100101110110001011001010111101101111001111110000000101001110110010010000101110000111000101011100100110111100100110011001010101010111111101011011000110010111001111010001000101111101";
+
+const char s_sinv[]="1101100100101001011111010011001101111010111001110111100001001100101000100010110000101101010111100000100101010111001010011010100010101001101011110101101000111000101100101110111010011001100001100011100011001011010010001111000010001110110101010111100111100011";
 
 char to_hex(int x){
     if(x<10)
@@ -125,15 +128,18 @@ void veify(){
     puts("Yes");
 }
 
-Bit ecdsa(void* ctx){ 
+Bit ecdsa(Bit *_sinv,int length){ 
+
     bool bits[256];  
-    BIGNUM *sinv=BN_new();
 
-    BN_mod_inverse(sinv,s,MOD,CTX);
-    bn2bool(sinv,bits);
-    
-
-    Number num_sinv(BITLENGTH,bits,PROVER);
+    //BIGNUM *sinv=BN_new();
+    //BN_mod_inverse(sinv,s,MOD,CTX);
+    //bn2bool(sinv,bits);
+    vector<Bit> vec_sinv;
+    for(int i=0;i<length;i++)
+        vec_sinv.push_back(_sinv[i]);
+    Integer int_sinv(vec_sinv);
+    Number num_sinv=b2a(int_sinv);//(BITLENGTH,bits,PROVER);
 
     bn2bool(z,bits);
     Integer int_z;
@@ -169,8 +175,7 @@ Bit ecdsa(void* ctx){
 
 
 Bit C(int length,Bit *m){
-    Bit bit(true,PUBLIC);
-    return bit;
+    return ECDSA::ecdsa(m,length);
 }
 
 Bit check(int length,Bit *bits,const char *s){
@@ -194,12 +199,12 @@ Bit swap(void *ctx){
     vector<Bit> key;
     vector<Bit> m;
     
-    for(int i=0;i<128;i++){// All zero key
-        key.push_back(Bit(false,PROVER));
+    for(int i=0;i<128;i++){ 
+        key.push_back(Bit(s_key[i]=='1',PROVER));
     }
 
-    for(int i=0;i<256;i++){// All zero message
-        m.push_back(Bit(false,PROVER));
+    for(int i=0;i<256;i++){ 
+        m.push_back(Bit(s_sinv[i]=='1',PROVER));
     }
 
     vector<Bit> out;
@@ -208,21 +213,32 @@ Bit swap(void *ctx){
     aes.compute(out.data(),key.data(),m.data());
     aes.compute(out.data()+128,key.data(),m.data()+128);
 
+    /*if(party==PROVER){
+        for(int i=0;i<256;i++){
+            cout<< getLSB(out[i].bit);
+        }
+        cout<<endl;
+    }*/
+
     Bit bit = check(out.size(),out.data(),ct);
     result = result & bit;
 
     Bit cbit = C(m.size(),m.data());
     result = result & cbit;
 
-
-    for(int i=0;i<2;i++){
+    for(int i=0;i<128;i++){
         Bit com[256],input[512],input2[512];
         for(int j=0;j<512;j++){
-            input[j]=Bit(false,PROVER);//randomness
+            input[j]=Bit(false,PROVER);//randomness all zero
         }
         input[0]=key[i];
         sha.compute(com,input,input2);
-        Bit sbit=check(256,com,sha_0);
+        Bit sbit;
+        if(s_key[i]=='1'){
+            sbit=check(256,com,sha_1);
+        }else{
+            sbit=check(256,com,sha_0);
+        }
         result = result & sbit;
     }
 
@@ -243,7 +259,7 @@ int main(int argc, char** argv) {
     
     puts("pre");
 
-	if(!judge(io,party,NULL,ECDSA::ecdsa)){
+	if(!judge(io,party,NULL,swap)){
 		error("failed");
 		return 0;
 	}
