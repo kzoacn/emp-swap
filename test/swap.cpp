@@ -7,10 +7,14 @@ using namespace std;
 int port, party;
 NetIO * io;
 const char sha_path[]="/home/kzoacn/work/emp-swap/emp-swap/files/sha-256.txt";
-
+const char aes_path[]="/home/kzoacn/work/emp-swap/emp-swap/files/AES-non-expanded.txt";
 // SHA(0) = 
-const char answer[] ="1101101001010110100110001011111000010111101110011011010001101001011000100011001101010111100110010111011110011111101111101100101010001100111001011101010010010001110000001101001001100010010000111011101011111110111110011110101000011000001101111010100111011000";
-// DA5698BE17B9B46962335799779FBECA8CE5D491C0D26243BAFEF9EA1837A9D8
+const char sha_0[]="1101101001010110100110001011111000010111101110011011010001101001011000100011001101010111100110010111011110011111101111101100101010001100111001011101010010010001110000001101001001100010010000111011101011111110111110011110101000011000001101111010100111011000";
+// SHA(1) = 
+const char sha_1[]="1110001110110000110001000100001010011000111111000001110000010100100110101111101111110100110010001001100101101111101110010010010000100111101011100100000111100100011001001001101110010011010011001010010010010101100110010001101101111000010100101011100001010101";
+// Enc(0,0) x 2 =
+const char ct[]="0110011011101001010010111101010011101111100010100010110000111011100010000100110011111010010110011100101000110100001010110010111001100110111010010100101111010100111011111000101000101100001110111000100001001100111110100101100111001010001101000010101100101110";
+
 
 char to_hex(int x){
     if(x<10)
@@ -28,35 +32,203 @@ string to_hex(string s){
     }
     return ans;
 }
+ 
 
+namespace ECDSA{
 
-Bit sha_test(void* ctx){
+EC_POINT *PK;
+BIGNUM *sk;
+EC_POINT *P; //kG
+BIGNUM *r,*s;
+BIGNUM *z;
 
-    BristolFormat sha(sha_path);
-    
-    Bit out[256],in1[512],in2[512];
-    
-    for(int i=0;i<512;i++){
-        in1[i]=Bit(false,PUBLIC);
-        in2[i]=Bit(false,PUBLIC);
+const int _sk = 1234567;
+const int message = 123;
+const int _k=124;
+
+void keygen(){
+    PK=EC_POINT_new(GROUP);
+    sk=BN_new();
+    if(party==PROVER){
+        BN_set_word(sk,_sk);
+        EC_POINT_mul(GROUP,PK,sk,NULL,NULL,CTX);
+        send_pt(io,PK);
+    }else{
+        recv_pt(io,PK);
     }
-    
-    sha.compute(out,in1,in2);
+}
 
-    Bit bit(true,PUBLIC);
+void sign(){
+    z=BN_new();
+    BN_set_word(z,message);
+    r=BN_new();
+    s=BN_new();
+    P=EC_POINT_new(GROUP); 
+    if(party==PROVER){
+         
+        BIGNUM *k,*tmp,*kinv;
+        k=BN_new();
+        tmp=BN_new();
+        kinv=BN_new();
 
+        BN_set_word(k,_k);
 
-    for(int i=0;i<256;i++){    
-        if(answer[i]=='1'){
-            bit = bit & out[i];
-        }else{
-            bit = bit & !out[i];
+        
+        EC_POINT_mul(GROUP,P,k,NULL,NULL,CTX);
+        EC_POINT_get_affine_coordinates_GFp(GROUP,P,r,NULL,CTX);
+
+        BN_mod(r,r,MOD,CTX);
+        // if r==0, then k is not a valid secret key
+        if(BN_is_zero(r)){
+            error("failed sign");
+            return;
         }
+        BN_mod_mul(tmp,r,sk,MOD,CTX);
+        BN_mod_add(tmp,z,tmp,MOD,CTX);
+        BN_mod_inverse(kinv,k,MOD,CTX);
+        BN_mod_mul(s,tmp,kinv,MOD,CTX);
+
+        send_bn(io,r);
+        //send_bn(io,s);
+        send_pt(io,P); 
+    }else{ 
+        recv_bn(io,r);
+        //recv_bn(io,s);
+        recv_pt(io,P);
+    } 
+}
+
+void veify(){
+    BIGNUM *tmp,*sinv,*u1,*u2;
+    tmp=BN_new();
+    sinv=BN_new();
+    u1=BN_new();
+    u2=BN_new();
+
+    if(BN_is_zero(r)){
+        error("verify failed");
+        return;
+    }
+    BN_mod_inverse(sinv,s,MOD,CTX);
+    BN_mod_mul(u1,z,sinv,MOD,CTX);
+    BN_mod_mul(u2,r,sinv,MOD,CTX);
+    EC_POINT *Q=EC_POINT_new(GROUP);
+    EC_POINT_mul(GROUP,Q,u1,PK,u2,CTX);
+    
+    EC_POINT_get_affine_coordinates_GFp(GROUP,Q,tmp,NULL,CTX);
+    BN_mod(tmp,tmp,MOD,CTX);
+    if(BN_cmp(tmp,r)!=0){
+        error("verify failed");
+        return;
     }
 
+    puts("Yes");
+}
+
+Bit ecdsa(void* ctx){ 
+    bool bits[256];  
+    BIGNUM *sinv=BN_new();
+
+    BN_mod_inverse(sinv,s,MOD,CTX);
+    bn2bool(sinv,bits);
+    
+
+    Number num_sinv(BITLENGTH,bits,PROVER);
+
+    bn2bool(z,bits);
+    Integer int_z;
+    int_z.init(bits,BITLENGTH,PUBLIC);
+
+    bn2bool(r,bits);
+    Integer int_r;
+    int_r.init(bits,BITLENGTH,PUBLIC);
+
+    Number u1,u2;
+    u1=num_sinv*int_z;
+    u2=num_sinv*int_r;
+
+    Integer int_sk;
+    bn2bool(sk,bits);    
+    int_sk.init(bits,BITLENGTH,PROVER);
+
+    Number num_sk;
+    num_sk=b2a(int_sk);
+    num_sk.assert_dlog(PK);
+
+    Number k=u1+u2*int_sk;
+
+    k.assert_dlog(P);
+
+    Bit ans(true,PUBLIC);
+    return ans;
+} 
+
+
+
+}
+
+
+Bit C(int length,Bit *m){
+    Bit bit(true,PUBLIC);
     return bit;
 }
 
+Bit check(int length,Bit *bits,const char *s){
+    Bit bit(true,PUBLIC);
+    for(int i=0;i<length;i++){
+        if(s[i]=='1'){
+            bit = bit & bits[i];
+        }else{
+            bit = bit & !bits[i];
+        }
+    }
+    return bit;
+}
+
+Bit swap(void *ctx){
+ 
+    Bit result(true,PUBLIC);
+
+    BristolFormat aes(aes_path);
+    BristolFormat sha(sha_path);
+    vector<Bit> key;
+    vector<Bit> m;
+    
+    for(int i=0;i<128;i++){// All zero key
+        key.push_back(Bit(false,PROVER));
+    }
+
+    for(int i=0;i<256;i++){// All zero message
+        m.push_back(Bit(false,PROVER));
+    }
+
+    vector<Bit> out;
+    out.resize(256);
+
+    aes.compute(out.data(),key.data(),m.data());
+    aes.compute(out.data()+128,key.data(),m.data()+128);
+
+    Bit bit = check(out.size(),out.data(),ct);
+    result = result & bit;
+
+    Bit cbit = C(m.size(),m.data());
+    result = result & cbit;
+
+
+    for(int i=0;i<2;i++){
+        Bit com[256],input[512],input2[512];
+        for(int j=0;j<512;j++){
+            input[j]=Bit(false,PROVER);//randomness
+        }
+        input[0]=key[i];
+        sha.compute(com,input,input2);
+        Bit sbit=check(256,com,sha_0);
+        result = result & sbit;
+    }
+
+
+    return result;
+}
 
 int main(int argc, char** argv) {
 
@@ -65,13 +237,22 @@ int main(int argc, char** argv) {
 	setup_arithmetic_zk(io, party);
     //if(party==VERIFIER)return 0;
 
-	if(!judge(io,party,NULL,sha_test)){
+
+    ECDSA::keygen();
+    ECDSA::sign();
+    
+    puts("pre");
+
+	if(!judge(io,party,NULL,ECDSA::ecdsa)){
 		error("failed");
 		return 0;
 	}
+    std::cout << io->counter << std:: endl;
     puts("Yes");
-   /*CircuitExecution::circ_exec=new AriPlainEva();
+   
+ /*   CircuitExecution::circ_exec=new AriPlainEva();
 
+    BristolFormat sha(sha_path);
 
     block out[256],in1[512],in2[512];
     memset(out,0,sizeof out);
@@ -82,6 +263,8 @@ int main(int argc, char** argv) {
         *((char *) &in1[i]) &= 0xfe;
        	*((char *) &in1[i]) |= 0;       
     }
+
+    *((char *) &in1[0]) |= 1;
 
     sha.compute(out,in1,in2);
 

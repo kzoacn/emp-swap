@@ -42,6 +42,35 @@ string padding(string chars){
 }
 
 
+
+/*Bit sha_test(void* ctx){
+
+    BristolFormat sha(sha_path);
+    
+    Bit out[256],in1[512],in2[512];
+    
+    for(int i=0;i<512;i++){
+        in1[i]=Bit(false,PUBLIC);
+        in2[i]=Bit(false,PUBLIC);
+    }
+    
+    sha.compute(out,in1,in2);
+
+    Bit bit(true,PUBLIC);
+
+
+    for(int i=0;i<256;i++){    
+        if(sha_0[i]=='1'){
+            bit = bit & out[i];
+        }else{
+            bit = bit & !out[i];
+        }
+    }
+
+    return bit;
+}*/
+
+
 char to_hex(int x){
     if(x<10)
         return '0'+x;
