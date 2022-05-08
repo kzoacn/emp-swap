@@ -8,20 +8,26 @@ using namespace emp;
 int port, party;
 NetIO * io;
 
+ 
+
 EC_POINT *PK;
 BIGNUM *sk;
 EC_POINT *P; //kG
 BIGNUM *r,*s;
+BIGNUM *z;
+
+
 
 void keygen(){
     sk=BN_new();
-    BN_set_word(sk,123456);
+    BN_set_word(sk,1234567);
+
     PK=EC_POINT_new(GROUP);
     EC_POINT_mul(GROUP,PK,sk,NULL,NULL,CTX);
 }
 
 void sign(){
-    BIGNUM *z,*k,*tmp,*kinv;
+    BIGNUM *k,*tmp,*kinv;
     z=BN_new();
     k=BN_new();
     r=BN_new();
@@ -29,7 +35,7 @@ void sign(){
     tmp=BN_new();
     kinv=BN_new();
 
-    BN_set_word(z,123);
+    BN_set_word(z,333);
     BN_set_word(k,124);
 
     P=EC_POINT_new(GROUP);
@@ -50,14 +56,12 @@ void sign(){
 }
 
 void veify(){
-    BIGNUM *z,*tmp,*sinv,*u1,*u2;
-    z=BN_new();
+    BIGNUM *tmp,*sinv,*u1,*u2;
     tmp=BN_new();
     sinv=BN_new();
     u1=BN_new();
     u2=BN_new();
 
-    BN_set_word(z,123);
     if(BN_is_zero(r)){
         error("verify failed");
         return;
@@ -80,13 +84,12 @@ void veify(){
 
 Bit ecdsa(void* ctx){ 
     bool bits[256]; 
-    BIGNUM *sinv=BN_new(),*z=BN_new();
+    BIGNUM *sinv=BN_new();
     BN_mod_inverse(sinv,s,MOD,CTX);
 
     bn2bool(sinv,bits);
     Number num_sinv(BITLENGTH,bits,PROVER);
 
-    BN_set_word(z,123);
     bn2bool(z,bits);
     Integer int_z;
     int_z.init(bits,BITLENGTH,PUBLIC);
