@@ -94,6 +94,16 @@ void recv_pt(IO *io, EC_POINT *&point) {
 	delete[] tmp;
 }
 
+void bn2bool(BIGNUM *bn, bool *bits) { // fix 256 bits
+	unsigned char tmp[32];
+    memset(tmp,0,32);
+    BN_bn2binpad(bn,tmp,32);
+    for(int i=31;i>=0;i--){
+        for(int j=0;j<8;j++){
+            bits[(31-i)*8+j]=(tmp[i]>>j)&1;
+        }
+    }
+}
 
 }
 #endif

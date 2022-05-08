@@ -16,6 +16,7 @@ class Number{ public:
 	}
     Number(const long long &x);
     Number(int length, long long input, int party);
+    Number(int length, bool* input, int party);
     Number(const Number &oth);
 
     Number& operator=(const Number &rhs);

@@ -14,6 +14,17 @@ Number::Number(int length, long long input, int party = PROVER){
 		BN_copy(val,c.val);
 		BN_copy(mask,c.mask);
 }
+
+Number::Number(int length, bool* input, int party = PROVER){
+        Integer t;
+		t.init(input,length,party);  
+        Number c=b2a(t); 
+		val = BN_new();
+		mask = BN_new();
+		BN_copy(val,c.val);
+		BN_copy(mask,c.mask);
+}
+
 Number::Number(const long long &x){
         Integer t(BITLENGTH,x,PUBLIC);
         Number c=b2a(t);
