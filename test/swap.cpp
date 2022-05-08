@@ -255,9 +255,7 @@ int main(int argc, char** argv) {
 
 
     ECDSA::keygen();
-    ECDSA::sign();
-    
-    puts("pre");
+    ECDSA::sign(); 
 
 	if(!judge(io,party,NULL,swap)){
 		error("failed");

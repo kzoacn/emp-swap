@@ -1,0 +1,18 @@
+connected
+evaluating circuit
+batched buffer size : 66176
+checking circuit
+batched buffer size : 66176
+1063239
+Yes
+186812709
+Yes
+
+real	0m4.201s
+user	0m0.653s
+sys	0m0.012s
+
+real	0m4.214s
+user	0m5.131s
+sys	0m1.980s
+
