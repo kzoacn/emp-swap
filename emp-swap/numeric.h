@@ -1,7 +1,7 @@
 #ifndef NUMERIC_H
 #define NUMERIC_H
 #include "emp-tool/emp-tool.h"
-
+#include "emp-swap/constant.h"
 namespace emp {
 
 const static int PROVER = 1;
@@ -72,6 +72,28 @@ void recv_bn(IO *io, BIGNUM *&bn) {
 	io->recv_data(tmp, len);
 	BN_bin2bn(tmp,len,bn);
 }
+
+
+template<class IO>
+void send_pt(IO *io, const EC_POINT *point) { 
+	int size = EC_POINT_point2oct(GROUP, point, POINT_CONVERSION_UNCOMPRESSED, NULL, 0, CTX);
+	unsigned char *tmp=new unsigned char[size];
+	EC_POINT_point2oct(GROUP, point, POINT_CONVERSION_UNCOMPRESSED, tmp, size, CTX);
+	io->send_data(&size,4);
+	io->send_data(tmp, size);
+	delete[] tmp;
+}
+
+template<class IO>
+void recv_pt(IO *io, EC_POINT *&point) { 
+	int size;
+	io->recv_data(&size,4);
+	unsigned char *tmp=new unsigned char[size];
+	io->recv_data(tmp, size);
+	EC_POINT_oct2point(GROUP, point, tmp, size, CTX);
+	delete[] tmp;
+}
+
 
 }
 #endif

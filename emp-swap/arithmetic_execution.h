@@ -16,6 +16,7 @@ public:
 	//virtual Integer a2b_gate(int length,const Number &val)=0;
 	virtual bool eq(const Number &a,const Number &b)=0;
 	virtual bool is_true(const Bit &bit)=0;
+	virtual bool dlog(const Number &x,const EC_POINT *P)=0;
 	virtual ~ArithmeticExecution (){ }
 };
 }

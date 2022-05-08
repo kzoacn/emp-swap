@@ -19,7 +19,8 @@ void setup_parameters(){
 	MOD = BN_new();
 	CTX = BN_CTX_new();
 	EC_GROUP_get_order(GROUP,MOD,CTX); 
-	//BN_set_word(MOD,13);
+	G=EC_POINT_new(GROUP);
+	EC_POINT_copy(G,EC_GROUP_get0_generator(GROUP));
 }
 
 template<typename IO>

@@ -25,7 +25,7 @@ class Number{ public:
     Number operator*(const Integer& rhs) const;
     
     void assert_eq(const Number &rhs) const;
-
+    void assert_dlog(const EC_POINT *P) const;
     Number operator-() const; 
     Number select(Bit bit,Number rhs)const; 
 };

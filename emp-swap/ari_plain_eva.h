@@ -85,6 +85,10 @@ class AriPlainEva  :public ArithmeticExecution{ public:
 
 		return true;
 	}
+
+	bool dlog(const Number &x,const EC_POINT *P){
+		return true;
+	}
     
 };
 }

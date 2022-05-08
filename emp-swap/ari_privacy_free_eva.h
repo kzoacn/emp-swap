@@ -159,6 +159,17 @@ class AriPrivacyFreeEva  :public ArithmeticExecution{ public:
 
 		return true;
 	}
+	bool dlog(const Number &x,const EC_POINT *P){
+		EC_POINT *Q=EC_POINT_new(GROUP);
+		EC_POINT_mul(GROUP,Q,x.mask,NULL,NULL,CTX);
+
+		int size = EC_POINT_point2oct(GROUP, Q, POINT_CONVERSION_UNCOMPRESSED, NULL, 0, CTX);
+		unsigned char *tmp=new unsigned char[size];
+		EC_POINT_point2oct(GROUP, Q, POINT_CONVERSION_UNCOMPRESSED, tmp, size, CTX);
+		eq_hash.put(tmp,size); 
+		delete[] tmp;
+		return true;
+	}
 };
 }
 #endif// PRIVACY_FREE_EVA_H__

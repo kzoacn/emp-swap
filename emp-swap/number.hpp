@@ -62,7 +62,6 @@ inline Number Number::operator*(const Integer& rhs) const{
 		t2k[i]=t;
 		t=t+t;
 	}
-	//t2k[rhs.size()-1]=-t2k[rhs.size()-1];
 
 	selects(rhs.size(),c,rhs.bits.data(),t2k,c);
 
@@ -79,4 +78,8 @@ inline Number Number::operator-() const{
  
 inline void Number::assert_eq(const Number& rhs) const{
 	ArithmeticExecution::ari_exec->eq(*this,rhs);
+}
+
+inline void Number::assert_dlog(const EC_POINT *P) const{
+	ArithmeticExecution::ari_exec->dlog(*this,P);
 }

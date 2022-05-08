@@ -5,6 +5,7 @@
 
 __thread BIGNUM *MOD;
 __thread EC_GROUP *GROUP;
+__thread EC_POINT *G;
 __thread BN_CTX *CTX;
 
 #endif

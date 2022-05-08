@@ -182,6 +182,18 @@ public:
 		eq_hash.put(&tmp,sizeof(block));
 		return true;
 	}
+	bool dlog(const Number &x,const EC_POINT *P){
+		EC_POINT *Q=EC_POINT_new(GROUP);
+		EC_POINT_mul(GROUP,Q,x.mask,P,mdelta,CTX);
+
+		int size = EC_POINT_point2oct(GROUP, Q, POINT_CONVERSION_UNCOMPRESSED, NULL, 0, CTX);
+		unsigned char *tmp=new unsigned char[size];
+		EC_POINT_point2oct(GROUP, Q, POINT_CONVERSION_UNCOMPRESSED, tmp, size, CTX);
+		eq_hash.put(tmp,size); 
+		delete[] tmp;
+
+		return true;
+	}
 };
 }
 
