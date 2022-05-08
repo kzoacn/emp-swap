@@ -60,11 +60,11 @@ string to_hex(string s){
 }
 
 int main(int argc, char** argv) {
-	//parse_party_and_port(argv, &party, &port);
-	//io = new NetIO(party==PROVER ? nullptr : "127.0.0.1", port);
-    
-	//setup_arithmetic_zk(io, party);
 
+	parse_party_and_port(argv, &party, &port);
+	io = new NetIO(party==PROVER ? nullptr : "127.0.0.1", port);
+	setup_arithmetic_zk(io, party);
+    if(party==VERIFIER)return 0;
 
 	/*if(!judge(io,party,NULL,ez)){
 		error("ez failed");
@@ -72,6 +72,7 @@ int main(int argc, char** argv) {
 	}
     */
    CircuitExecution::circ_exec=new AriPlainEva();
+
 
     block out[256],in1[512],in2[512];
     memset(out,0,sizeof out);
